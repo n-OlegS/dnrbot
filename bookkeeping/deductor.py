@@ -73,9 +73,8 @@ def process_group(gid, in_cursor=None, check_date=True):
         cursor.connection.close()
 
 
-if __name__ == '__main__':
+def deductor_d():
     while 1:
         deduct()
         time.sleep(24 * 60 * 60)
-
 

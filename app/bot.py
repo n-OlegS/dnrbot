@@ -10,6 +10,7 @@ import threading
 from core.core import Core
 from core.cleaner import clean
 from bookkeeping.core import BKCore
+from bookkeeping.deductor import deductor_d
 
 dotenv.load_dotenv(dotenv_path='../.env')
 TOKEN = os.getenv('BOT_TOKEN')
@@ -170,6 +171,10 @@ if __name__ == '__main__':
     print("[BOT] Starting database cleanup thread...")
     cleaning_thread = threading.Thread(target=cleaner, daemon=True)
     cleaning_thread.start()
+
+    print("[BOT] Starting deductor thread...")
+    deductor_thread = threading.Thread(target=deductor_d, daemon=True)
+    deductor_thread.start()
     
     # Start the bot
     print("[BOT] Bot ready, starting infinity polling...")
