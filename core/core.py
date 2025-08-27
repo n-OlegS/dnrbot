@@ -13,7 +13,9 @@ class Core:
         self.id = gid
         self.interval = 24 * 60 * 60
         self.last = 0
+        self.active = 0
         self.balance = 0
+        self.payed_date = 0
         self.summary = "No summary yet... \nUse /summary to generate"
 
         self.redis_conn = redis.Redis()
@@ -32,7 +34,7 @@ class Core:
         # pull from sql
         # set fields
 
-        x = self.cursor.execute('SELECT summ, balance, interval, last FROM chats WHERE id = ?', (self.id,)).fetchall()
+        x = self.cursor.execute('SELECT summ, balance, interval, last, payed_date, active FROM chats WHERE id = ?', (self.id,)).fetchall()
 
         if len(x) != 1:
             self._push(update=False)
@@ -40,24 +42,24 @@ class Core:
 
         x = x[0]
 
-        if len(x) != 4:
+        if len(x) != 6:
             self._push(update=False)
             return
 
-        self.summary, self.balance, self.interval, self.last = x
+        self.summary, self.balance, self.interval, self.last, self.payed_date, self.active = x
 
     def _push(self, update=True):
         print(f"[CORE] Pushing chat data to DB for chat {self.id}")
         if update:
-            self.cursor.execute('UPDATE chats SET interval = ?, last = ?, summ = ?, balance = ? WHERE id = ?', (self.interval, self.last, self.summary, self.balance, self.id))
+            self.cursor.execute('UPDATE chats SET interval = ?, last = ?, summ = ?, balance = ?, payed_date = ?, active = ? WHERE id = ?', (self.interval, self.last, self.summary, self.balance, self.payed_date, self.active, self.id))
         else:
-            self.cursor.execute('INSERT INTO chats (id, interval, last, summ, balance) VALUES (?, ?, ?, ?, ?)', (self.id, self.interval, self.last, self.summary, self.balance))
+            self.cursor.execute('INSERT INTO chats (id, interval, last, summ, balance, payed_date, active) VALUES (?, ?, ?, ?, ?, ?, ?)', (self.id, self.interval, self.last, self.summary, self.balance, self.payed_date, self.active))
         self.conn.commit()
 
     def _do_checks(self, uid, req_interval) -> tuple[bool, str]:
         # check if group ok
         if req_interval is None:
-            if time.time() >= self.last + self.interval:
+            if (bool(self.active) and time.time() >= self.last + self.interval) or time.time() > self.last + 24 * 60 * 60:
                 return True, "group"
 
         # check user ok

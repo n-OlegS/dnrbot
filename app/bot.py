@@ -88,7 +88,7 @@ def cleaner():
     while True:
         print("[BOT] Running database cleanup...")
         clean()
-        time.sleep(3660)
+        time.sleep(3600)
 
 
 def poll_summaries():
