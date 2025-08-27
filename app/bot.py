@@ -142,7 +142,8 @@ def poll_summaries():
     while 1:
         pending = redis_conn.get('pending')
         if pending is None:
-            raise ValueError
+            redis_conn.set('pending', 0)
+            pending = 0
 
         if int(pending) == 0:
             time.sleep(SLEEP_TIME)
