@@ -1,6 +1,9 @@
 import os
 import redis
 import json
+import httpx
+import dotenv
+import os
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -11,8 +14,12 @@ load_dotenv()
 def job(prompt, gid):
     print(f"[LLM] Starting summary job for chat {gid}")
     print(f"[LLM] Prompt length: {len(prompt)} characters")
+
+    dotenv.load_dotenv()
+    proxy_url = os.getenv('PROXY_URL')
+    http_client = httpx.Client(proxy=proxy_url)
     
-    client = OpenAI(api_key=os.getenv('OPENAI_KEY'))
+    client = OpenAI(api_key=os.getenv('OPENAI_KEY'), http_client=http_client)
     print(f"[LLM] OpenAI client initialized")
 
     with open(os.getenv('PROMPT_PATH'), 'r') as f:
@@ -30,7 +37,7 @@ def job(prompt, gid):
     out = response.output_text
     print(f"[LLM] Generated summary ({len(out)} chars) for chat {gid}")
     
-    redis_conn = redis.Redis()
+    redis_conn = redis.Redis(host=os.getenv('REDIS_HOST'))
     print(f"[LLM] Connected to Redis, storing results...")
 
     redis_conn.incrby('pending', 1)

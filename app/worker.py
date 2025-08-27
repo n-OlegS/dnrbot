@@ -1,3 +1,5 @@
+import os
+
 import redis
 from rq import SimpleWorker
 
@@ -6,7 +8,7 @@ if __name__ == '__main__':
     print("[WORKER] Starting Redis Queue worker...")
     
     # Connect to Redis
-    redis_conn = redis.Redis()
+    redis_conn = redis.Redis(host=os.getenv('REDIS_HOST'))
     print("[WORKER] Connected to Redis")
 
     # Use SimpleWorker which doesn't fork processes

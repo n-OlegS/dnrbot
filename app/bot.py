@@ -137,7 +137,7 @@ def cleaner():
 
 
 def poll_summaries():
-    redis_conn = redis.Redis()
+    redis_conn = redis.Redis(host=os.getenv('REDIS_HOST'))
 
     while 1:
         pending = redis_conn.get('pending')

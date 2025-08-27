@@ -20,7 +20,7 @@ class Core:
         self.payed_date = int(time.time())
         self.summary = "No summary yet... \nUse /summary to generate"
 
-        self.redis_conn = redis.Redis()
+        self.redis_conn = redis.Redis(host=os.getenv('REDIS_HOST'))
         self.rq = rq.Queue(connection=self.redis_conn)
 
         dotenv.load_dotenv()

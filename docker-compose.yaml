@@ -2,3 +2,17 @@ version: '3.8'
 services:
   redis:
     image: 'redis:7-alpine'
+
+  bot:
+    image: 'dnrbot:latest'
+    command: 'python app/bot.py'
+    volumes:
+      - /path/to/env:/app/.env
+      - /path/to/db:/app/data/data.db
+
+  worker:
+    image: 'dnrbot:latest'
+    command: 'python app/worker.py'
+    volumes:
+      - /path/to/env:/app/.env
+      - /path/to/db:/app/data/data.db
