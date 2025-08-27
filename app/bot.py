@@ -1,3 +1,4 @@
+import datetime
 import os
 import time
 import dotenv
@@ -8,6 +9,7 @@ import threading
 
 from core.core import Core
 from core.cleaner import clean
+from bookkeeping.core import BKCore
 
 dotenv.load_dotenv(dotenv_path='../.env')
 TOKEN = os.getenv('BOT_TOKEN')
@@ -20,6 +22,8 @@ if not TOKEN:
 bot = telebot.TeleBot(TOKEN, threaded=False)
 
 cores = {}
+
+bkcore = BKCore()
 
 
 def _get_core(gid) -> Core:
@@ -46,6 +50,8 @@ def handle_message(m: telebot.types.Message):
             summary(m)
         elif m.text[1:] == 'show':
             show(m)
+        elif m.text[1:6] == 'tier ':
+            change_tier(m)
         else:
             bot.reply_to(m, "Unknown command")
 
@@ -73,6 +79,37 @@ def summary(m: telebot.types.Message):
 
     print(f"[BOT] Summary request rejected for chat {gid}")
     bot.reply_to(m, "Timeout! Use /show to show the previous summary.")
+
+
+def change_tier(m: telebot.types.Message):
+    tier = m.text[6:]
+    try:
+        tier = int(tier)
+    except ValueError:
+        bot.reply_to(m, "Invalid tier")
+        return
+
+    if tier not in range(5):
+        bot.reply_to(m, "Invalid tier")
+        return
+
+    status = bkcore.handle_group_update(tier, m.chat.id)
+
+    if not status:
+        bot.reply_to(m, "Already on that tier!")
+        return
+
+    bot.reply_to(m, "Success!")
+
+
+def show_status(m: telebot.types.Message):
+    gid = m.chat.id
+    core = _get_core(gid)
+    interval, balance, payed_date, active, tier = core.get_status()
+
+    out = f"Active: {active}\nBalance: {balance}\nTier: {tier}\nInterval: {interval}\nPayed: {datetime.datetime.fromtimestamp(payed_date).strftime('%d-%m-%y %H:%M')}"
+
+    bot.reply_to(m, out)
 
 
 def show(m: telebot.types.Message):

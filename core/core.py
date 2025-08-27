@@ -1,10 +1,11 @@
 import redis
-from core.llm_gateway import job
 import rq
 import dotenv
 import sqlite3
 import os
 import time
+
+from core.llm_gateway import job
 
 
 class Core:
@@ -125,6 +126,10 @@ class Core:
 
     def get_summary(self):
         return self.summary
+
+    def get_status(self):
+        status = self.cursor.execute("SELECT interval, balance, payed_date, active, tier FROM chats WHERE id = ?", (self.active,)).fetchone()[0]
+        return status
 
     def new_message(self, mid, uid, timestamp, text, username, reply: int = 0):
         print(f"[CORE] Storing message from user {uid} in chat {self.id}")
