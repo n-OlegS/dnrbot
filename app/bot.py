@@ -47,12 +47,14 @@ def start_message(m: telebot.types.Message):
 @bot.message_handler(content_types=["text"])
 def handle_message(m: telebot.types.Message):
     if m.text[0] == '/':
-        if m.text[1:] in ['summ', 'summary']:
+        if m.text[1:] in ['summ', 'summary', 'generate', 'tldr']:
             summary(m)
         elif m.text[1:] == 'show':
             show(m)
         elif m.text[1:6] == 'tier ':
             change_tier(m)
+        elif m.text[1:] == "status":
+            show_status(m)
         else:
             bot.reply_to(m, "Unknown command")
 
@@ -76,6 +78,7 @@ def summary(m: telebot.types.Message):
 
     if status:
         print(f"[BOT] Summary request accepted for chat {gid}")
+        bot.set_message_reaction(m.chat.id, m.id, [telebot.types.ReactionTypeEmoji('⚡')])
         return
 
     print(f"[BOT] Summary request rejected for chat {gid}")
@@ -83,6 +86,9 @@ def summary(m: telebot.types.Message):
 
 
 def change_tier(m: telebot.types.Message):
+    gid = m.chat.id
+    this_core = _get_core(gid)
+
     tier = m.text[6:]
     try:
         tier = int(tier)
@@ -94,12 +100,13 @@ def change_tier(m: telebot.types.Message):
         bot.reply_to(m, "Invalid tier")
         return
 
-    status = bkcore.handle_group_update(tier, m.chat.id)
+    status = bkcore.handle_group_update(tier, gid)
 
     if not status:
         bot.reply_to(m, "Already on that tier!")
         return
 
+    this_core.update()
     bot.reply_to(m, "Success!")
 
 
@@ -108,7 +115,7 @@ def show_status(m: telebot.types.Message):
     core = _get_core(gid)
     interval, balance, payed_date, active, tier = core.get_status()
 
-    out = f"Active: {active}\nBalance: {balance}\nTier: {tier}\nInterval: {interval}\nPayed: {datetime.datetime.fromtimestamp(payed_date).strftime('%d-%m-%y %H:%M')}"
+    out = f"Active: {active}\nBalance: {balance}\nTier: {tier}\nInterval: {int(interval / 60)}m\nPayed: {datetime.datetime.fromtimestamp(payed_date).strftime('%d-%m-%y %H:%M')}"
 
     bot.reply_to(m, out)
 
@@ -156,8 +163,9 @@ def poll_summaries():
         bot.send_message(gid, f"#summary\n{time.strftime('%H:%M', time.localtime())}\n\n" + new_summary)
 
         print(f"[BOT] Storing summary {new_summary[:10]} in group {gid}")
-        core = _get_core(gid)
+        core = Core(gid)
         core.update_summary(new_summary)
+        core.close()
 
 
 if __name__ == '__main__':

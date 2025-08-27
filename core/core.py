@@ -16,7 +16,8 @@ class Core:
         self.last = 0
         self.active = 0
         self.balance = 0
-        self.payed_date = 0
+        self.tier = 0
+        self.payed_date = int(time.time())
         self.summary = "No summary yet... \nUse /summary to generate"
 
         self.redis_conn = redis.Redis()
@@ -28,14 +29,14 @@ class Core:
         self.conn = sqlite3.connect(path)
         self.cursor = self.conn.cursor()
 
-        self._update()
+        self.update()
         print(f"[CORE] Core initialized for chat {gid}")
 
-    def _update(self):
+    def update(self):
         # pull from sql
         # set fields
 
-        x = self.cursor.execute('SELECT summ, balance, interval, last, payed_date, active FROM chats WHERE id = ?', (self.id,)).fetchall()
+        x = self.cursor.execute('SELECT summ, balance, interval, last, payed_date, active, tier FROM chats WHERE id = ?', (self.id,)).fetchall()
 
         if len(x) != 1:
             self._push(update=False)
@@ -43,18 +44,18 @@ class Core:
 
         x = x[0]
 
-        if len(x) != 6:
+        if len(x) != 7:
             self._push(update=False)
             return
 
-        self.summary, self.balance, self.interval, self.last, self.payed_date, self.active = x
+        self.summary, self.balance, self.interval, self.last, self.payed_date, self.active, self.tier = x
 
     def _push(self, update=True):
         print(f"[CORE] Pushing chat data to DB for chat {self.id}")
         if update:
-            self.cursor.execute('UPDATE chats SET interval = ?, last = ?, summ = ?, balance = ?, payed_date = ?, active = ? WHERE id = ?', (self.interval, self.last, self.summary, self.balance, self.payed_date, self.active, self.id))
+            self.cursor.execute('UPDATE chats SET interval = ?, last = ?, summ = ?, balance = ?, payed_date = ?, active = ?, tier = ? WHERE id = ?', (self.interval, self.last, self.summary, self.balance, self.payed_date, self.active, self.tier, self.id))
         else:
-            self.cursor.execute('INSERT INTO chats (id, interval, last, summ, balance, payed_date, active) VALUES (?, ?, ?, ?, ?, ?, ?)', (self.id, self.interval, self.last, self.summary, self.balance, self.payed_date, self.active))
+            self.cursor.execute('INSERT INTO chats (id, interval, last, summ, balance, payed_date, active, tier) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', (self.id, self.interval, self.last, self.summary, self.balance, self.payed_date, self.active, self.tier))
         self.conn.commit()
 
     def _do_checks(self, uid, req_interval) -> tuple[bool, str]:
@@ -125,10 +126,12 @@ class Core:
         self._push()
 
     def get_summary(self):
+        self.update()
         return self.summary
 
     def get_status(self):
-        status = self.cursor.execute("SELECT interval, balance, payed_date, active, tier FROM chats WHERE id = ?", (self.active,)).fetchone()[0]
+        self.update()
+        status = self.cursor.execute("SELECT interval, balance, payed_date, active, tier FROM chats WHERE id = ?", (self.id,)).fetchone()
         return status
 
     def new_message(self, mid, uid, timestamp, text, username, reply: int = 0):

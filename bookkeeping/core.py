@@ -2,7 +2,7 @@ import sqlite3
 import dotenv
 import os
 
-from deductor import process_group
+from bookkeeping.deductor import process_group
 
 
 class BKCore:

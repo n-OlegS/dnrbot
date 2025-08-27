@@ -62,11 +62,13 @@ def process_group(gid, in_cursor=None, check_date=True):
         cursor.execute(f'UPDATE chats SET payed_date = ?, balance = ? WHERE id = ?', (payed_date, balance, gid))
         cursor.connection.commit()
         out = True
+        interval = cursor.execute('SELECT interval FROM prices WHERE id = ?', (tier,)).fetchone()[0]
     else:
+        interval = 86400
         balance += due
         out = False
 
-    cursor.execute('UPDATE chats SET active = ? WHERE id = ?', (int(out), gid))
+    cursor.execute('UPDATE chats SET active = ?, interval = ? WHERE id = ?', (int(out), interval * 60, gid))
     cursor.connection.commit()
 
     if in_cursor is None:
