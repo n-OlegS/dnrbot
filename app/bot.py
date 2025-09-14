@@ -39,7 +39,7 @@ def _get_core(gid) -> Core:
         return core
 
 
-@bot.message_handler(commands=['start', 'help'])
+@bot.message_handler(commands=['start'])
 def start_message(m: telebot.types.Message):
     print(f"[BOT] Start/help command from user {m.from_user.id} in chat {m.chat.id}")
     bot.reply_to(m, "Hello world!")
