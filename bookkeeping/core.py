@@ -36,4 +36,9 @@ class BKCore:
 
         return True
 
+    def group_payed(self, gid, amount):
+        old_amount = self.cursor.execute('SELECT balance FROM chats WHERE id = ?', (gid,)).fetchone()[0]
+        self.cursor.execute('UPDATE chats SET balance = ? WHERE id = ?', (old_amount + amount, gid))
+        self.connection.commit()
+
 

@@ -14,6 +14,7 @@ from bookkeeping.deductor import deductor_d
 
 dotenv.load_dotenv(dotenv_path='../.env')
 TOKEN = os.getenv('BOT_TOKEN')
+DEBUG = os.getenv('DEBUG') == 'True'
 
 SLEEP_TIME = 1
 
@@ -55,6 +56,8 @@ def handle_message(m: telebot.types.Message):
             change_tier(m)
         elif m.text[1:] == "status":
             show_status(m)
+        elif m.text[1:5] in ['pay ', 'buy ']:
+            initiate_payment(m)
         else:
             bot.reply_to(m, "Unknown command")
 
@@ -83,6 +86,69 @@ def summary(m: telebot.types.Message):
 
     print(f"[BOT] Summary request rejected for chat {gid}")
     bot.reply_to(m, "Timeout! Use /show to show the previous summary.")
+
+
+def _check_amount(amount):
+    try:
+        amount = int(amount)
+    except ValueError:
+        return False
+
+    if DEBUG:
+        return True
+    else:
+        if amount < 50 or amount > 5000:
+            return False
+
+
+def initiate_payment(m: telebot.types.Message):
+    # ensure payment ok
+    amount = m.text[4:]
+
+    if not _check_amount(amount):
+        bot.reply_to(m, 'Invalid amount!')
+        return
+
+    amount = int(amount)
+
+    payload = f"topup:{m.chat.id}"
+
+    """prices = [
+        # telebot.types.LabeledPrice(f'{amount} Stars', str(amount)),
+        telebot.types.LabeledPrice('10 Star', '10'),
+        telebot.types.LabeledPrice('50 Stars', '50'),
+        telebot.types.LabeledPrice('100 Stars', '100'),
+        telebot.types.LabeledPrice('250 Stars', '250'),
+        telebot.types.LabeledPrice('500 Stars', '500'),
+        telebot.types.LabeledPrice('1000 Stars', '1000')
+
+    ]"""
+    bot.send_invoice(chat_id=m.chat.id, title="Top up account", description='Top up your group balance!', invoice_payload=payload, provider_token='', currency='XTR', prices=[telebot.types.LabeledPrice(f'{amount} Stars', amount)])
+
+
+@bot.pre_checkout_query_handler(func=lambda q: True)
+def checkout(pre_q: telebot.types.PreCheckoutQuery):
+    bot.answer_pre_checkout_query(pre_q.id, ok=True)
+
+
+@bot.message_handler(content_types=['successful_payment'])
+def got_payment(msg):
+    sp = msg.successful_payment
+    payload = sp.invoice_payload
+    # sp.currency == 'XTR'
+    stars_paid = sp.total_amount            # total Stars paid (integer)
+
+    bot.reply_to(
+        msg,
+        f"✅ Payment received: {stars_paid}⭐\n"
+        "Enjoy!"
+    )
+
+    # TODO: add stars to balance
+    _, gid = payload.split(':')
+    if stars_paid == 1 and DEBUG:
+        stars_paid = 100
+    bkcore.group_payed(gid, stars_paid)
 
 
 def change_tier(m: telebot.types.Message):
