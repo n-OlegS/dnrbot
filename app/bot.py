@@ -42,7 +42,7 @@ def _get_core(gid) -> Core:
 @bot.message_handler(commands=['start'])
 def start_message(m: telebot.types.Message):
     print(f"[BOT] Start/help command from user {m.from_user.id} in chat {m.chat.id}")
-    bot.reply_to(m, "Hello world!")
+    bot.reply_to(m, "👋 Welcome to SummaryBot!\n\nI help you generate concise summaries of your chat conversations. Use /help to see all available commands.")
 
 
 @bot.message_handler(content_types=["text"])
@@ -61,7 +61,7 @@ def handle_message(m: telebot.types.Message):
         elif m.text[1:5] in ['pay ', 'buy ']:
             initiate_payment(m)
         else:
-            bot.reply_to(m, "Unknown command")
+            bot.reply_to(m, "❓ Unknown command. Use /help to see all available commands.")
 
         return
 
@@ -87,7 +87,7 @@ def summary(m: telebot.types.Message):
         return
 
     print(f"[BOT] Summary request rejected for chat {gid}")
-    bot.reply_to(m, "Timeout! Use /show to show the previous summary.")
+    bot.reply_to(m, "⏱️ Summary request is on cooldown. Use /show to view your last summary or check /status for timing details.")
 
 
 def _check_amount(amount):
@@ -108,7 +108,7 @@ def initiate_payment(m: telebot.types.Message):
     amount = m.text[4:]
 
     if not _check_amount(amount):
-        bot.reply_to(m, 'Invalid amount!')
+        bot.reply_to(m, '❌ Invalid amount! Please specify between 50-5000 stars.')
         return
 
     amount = int(amount)
@@ -142,8 +142,7 @@ def got_payment(msg):
 
     bot.reply_to(
         msg,
-        f"✅ Payment received: {stars_paid}⭐\n"
-        "Enjoy!"
+        f"✅ **Payment Successful**\n\n💫 {stars_paid} stars added to your balance\n\nThank you for your support!"
     )
 
     # TODO: add stars to balance
@@ -154,7 +153,7 @@ def got_payment(msg):
 
 
 def show_help(m: telebot.types.Message):
-    bot.reply_to(m, "/summary to sgenerate sumamry \n/show to show last summary \n/status to see group payed status\n/pay X to pay X\n/tier X to switch to tier X\n/help to see this text \n\nTiers available - 0, 1, 2, 3, 4 \nnumber|price/month|timeout(min) \n0|0|1440 \n1|250|180 \n2|500|60 \n3|1000|15 \n4|2000|15")
+    bot.reply_to(m, "📋 **Available Commands:**\n\n🔸 `/summary` - Generate chat summary\n🔸 `/show` - View last summary\n🔸 `/status` - Check account status\n🔸 `/pay X` - Purchase X stars\n🔸 `/tier X` - Switch to tier X\n\n💎 **Subscription Tiers:**\n\n```\nTier │ Price/Month │ Cooldown\n─────┼─────────────┼─────────\n  0  │     FREE    │  24 hrs\n  1  │  250 stars  │  3 hrs\n  2  │  500 stars  │  1 hr\n  3  │ 1000 stars  │ 15 min\n  4  │ 2000 stars  │ 15 min\n```")
 
 
 def change_tier(m: telebot.types.Message):
@@ -165,21 +164,21 @@ def change_tier(m: telebot.types.Message):
     try:
         tier = int(tier)
     except ValueError:
-        bot.reply_to(m, "Invalid tier")
+        bot.reply_to(m, "❌ Invalid tier. Please choose from 0-4.")
         return
 
     if tier not in range(5):
-        bot.reply_to(m, "Invalid tier")
+        bot.reply_to(m, "❌ Invalid tier. Please choose from 0-4.")
         return
 
     status = bkcore.handle_group_update(tier, gid)
 
     if not status:
-        bot.reply_to(m, "Already on that tier!")
+        bot.reply_to(m, f"ℹ️ You're already on tier {tier}.")
         return
 
     this_core.update()
-    bot.reply_to(m, "Success!")
+    bot.reply_to(m, "✅ Tier updated successfully!")
 
 
 def show_status(m: telebot.types.Message):
@@ -187,7 +186,8 @@ def show_status(m: telebot.types.Message):
     core = _get_core(gid)
     interval, balance, payed_date, active, tier = core.get_status()
 
-    out = f"Active: {active}\nBalance: {balance}\nTier: {tier}\nInterval: {int(interval / 60)}m\nPayed: {datetime.datetime.fromtimestamp(payed_date).strftime('%d-%m-%y %H:%M')}"
+    status_icon = "🟢" if active else "🔴"
+    out = f"📊 **Account Status**\n\n{status_icon} **Status:** {'Active' if active else 'Inactive'}\n💰 **Balance:** {balance} stars\n💎 **Tier:** {tier}\n⏱️ **Cooldown:** {int(interval / 60)} minutes\n📅 **Last Payment:** {datetime.datetime.fromtimestamp(payed_date).strftime('%d/%m/%y %H:%M')}"
 
     bot.reply_to(m, out)
 
@@ -233,7 +233,7 @@ def poll_summaries():
         redis_conn.set('summaries', json.dumps(summs))
 
         print(f"[BOT] Sending summary to chat {gid}")
-        bot.send_message(gid, f"#summary\n{time.strftime('%H:%M', time.localtime())}\n\n" + new_summary)
+        bot.send_message(gid, f"📄 **Summary Generated**\n🕒 {time.strftime('%H:%M', time.localtime())}\n\n{new_summary}")
 
         print(f"[BOT] Storing summary {new_summary[:10]} in group {gid}")
         core = Core(gid)
