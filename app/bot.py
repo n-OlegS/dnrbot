@@ -153,7 +153,7 @@ def got_payment(msg):
 
 
 def show_help(m: telebot.types.Message):
-    bot.reply_to(m, "📋 **Available Commands:**\n\n🔸 `/summary` - Generate chat summary\n🔸 `/show` - View last summary\n🔸 `/status` - Check account status\n🔸 `/pay X` - Purchase X stars\n🔸 `/tier X` - Switch to tier X\n\n💎 **Subscription Tiers:**\n\n```\nTier │ Price/Month │ Cooldown\n─────┼─────────────┼─────────\n  0  │     FREE    │  24 hrs\n  1  │  250 stars  │  3 hrs\n  2  │  500 stars  │  1 hr\n  3  │ 1000 stars  │ 15 min\n  4  │ 2000 stars  │ 15 min\n```")
+    bot.reply_to(m, "📋 **Available Commands:**\n\n🔸 `/summary` - Generate chat summary\n🔸 `/show` - View last summary\n🔸 `/status` - Check account status\n🔸 `/pay X` - Purchase X stars\n🔸 `/tier X` - Switch to tier (free/basic/plus/pro/max/elite)\n\n💎 **Subscription Tiers:**\n\n```\n Tier  │ Price/Month │ Cooldown\n───────┼─────────────┼─────────\n FREE  │      0      │  24 hrs\n BASIC │  250 stars  │  3 hrs\n PLUS  │  500 stars  │  1 hr\n PRO   │ 1000 stars  │ 15 min\n MAX   │ 2000 stars  │ 15 min\n ELITE │ 2000 stars  │ 15 min\n```")
 
 
 def change_tier(m: telebot.types.Message):
@@ -161,20 +161,22 @@ def change_tier(m: telebot.types.Message):
     this_core = _get_core(gid)
 
     tier = m.text[6:]
-    try:
-        tier = int(tier)
-    except ValueError:
-        bot.reply_to(m, "❌ Invalid tier. Please choose from 0-4.")
-        return
+    # Remove the numeric tier parsing since we now use names
 
-    if tier not in range(5):
-        bot.reply_to(m, "❌ Invalid tier. Please choose from 0-4.")
+    tier_names = {"free": 0, "basic": 1, "plus": 2, "pro": 3, "max": 4, "elite": 4}
+    
+    if tier.lower() not in tier_names:
+        bot.reply_to(m, "❌ Invalid tier. Choose from: free, basic, plus, pro, max, elite")
         return
+        
+    tier = tier_names[tier.lower()]
 
     status = bkcore.handle_group_update(tier, gid)
 
     if not status:
-        bot.reply_to(m, f"ℹ️ You're already on tier {tier}.")
+        tier_names = ["FREE", "BASIC", "PLUS", "PRO", "MAX", "ELITE"]
+        tier_name = tier_names[tier] if tier < len(tier_names) else f"TIER {tier}"
+        bot.reply_to(m, f"ℹ️ You're already on {tier_name} tier.")
         return
 
     this_core.update()
@@ -187,7 +189,9 @@ def show_status(m: telebot.types.Message):
     interval, balance, payed_date, active, tier = core.get_status()
 
     status_icon = "🟢" if active else "🔴"
-    out = f"📊 **Account Status**\n\n{status_icon} **Status:** {'Active' if active else 'Inactive'}\n💰 **Balance:** {balance} stars\n💎 **Tier:** {tier}\n⏱️ **Cooldown:** {int(interval / 60)} minutes\n📅 **Last Payment:** {datetime.datetime.fromtimestamp(payed_date).strftime('%d/%m/%y %H:%M')}"
+    tier_names = ["FREE", "BASIC", "PLUS", "PRO", "MAX", "ELITE"]
+    tier_name = tier_names[tier] if tier < len(tier_names) else f"TIER {tier}"
+    out = f"📊 **Account Status**\n\n{status_icon} **Status:** {'Active' if active else 'Inactive'}\n💰 **Balance:** {balance} stars\n💎 **Tier:** {tier_name}\n⏱️ **Cooldown:** {int(interval / 60)} minutes\n📅 **Last Payment:** {datetime.datetime.fromtimestamp(payed_date).strftime('%d/%m/%y %H:%M')}"
 
     bot.reply_to(m, out)
 
