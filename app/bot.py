@@ -42,7 +42,7 @@ def _get_core(gid) -> Core:
 @bot.message_handler(commands=['start'])
 def start_message(m: telebot.types.Message):
     print(f"[BOT] Start/help command from user {m.from_user.id} in chat {m.chat.id}")
-    bot.reply_to(m, "Welcome to SummaryBot!\n\nI help you generate concise summaries of your chat conversations. Use /help to see all available commands.")
+    bot.reply_to(m, "👋 Welcome to SummaryBot!\n\nI help you generate concise summaries of your chat conversations. Use /help to see all available commands.")
 
 
 @bot.message_handler(content_types=["text"])
@@ -61,7 +61,7 @@ def handle_message(m: telebot.types.Message):
         elif m.text[1:5] in ['pay ', 'buy ']:
             initiate_payment(m)
         else:
-            bot.reply_to(m, "Unknown command. Use /help to see all available commands.")
+            bot.reply_to(m, "❓ Unknown command. Use /help to see all available commands.")
 
         return
 
@@ -87,7 +87,7 @@ def summary(m: telebot.types.Message):
         return
 
     print(f"[BOT] Summary request rejected for chat {gid}")
-    bot.reply_to(m, "Summary request is on cooldown. Use /show to view your last summary or check /status for timing details.")
+    bot.reply_to(m, "⏱️ Summary request is on cooldown. Use /show to view your last summary or check /status for timing details.")
 
 
 def _check_amount(amount):
@@ -108,7 +108,7 @@ def initiate_payment(m: telebot.types.Message):
     amount = m.text[4:]
 
     if not _check_amount(amount):
-        bot.reply_to(m, 'Invalid amount! Please specify between 50-5000 stars.')
+        bot.reply_to(m, '❌ Invalid amount! Please specify between 50-5000 stars.')
         return
 
     amount = int(amount)
@@ -142,7 +142,7 @@ def got_payment(msg):
 
     bot.reply_to(
         msg,
-        f"Payment successful - {stars_paid} stars added to your balance. Thank you for your support!"
+        f"✅ Payment successful - {stars_paid} ⭐ stars added to your balance. Thank you for your support!"
     )
 
     # TODO: add stars to balance
@@ -153,7 +153,7 @@ def got_payment(msg):
 
 
 def show_help(m: telebot.types.Message):
-    bot.reply_to(m, "Available Commands:\n\n/summary - Generate chat summary\n/show - View last summary\n/status - Check account status\n/pay X - Purchase X stars\n/tier X - Switch tier (free/basic/plus/pro/max/elite)\n\nSubscription Tiers:\n\nFREE - 0 stars - 24 hrs cooldown\nBASIC - 250 stars - 3 hrs cooldown\nPLUS - 500 stars - 1 hr cooldown\nPRO - 1000 stars - 15 min cooldown\nMAX - 2000 stars - 15 min cooldown\nELITE - 2000 stars - 15 min cooldown")
+    bot.reply_to(m, "📋 Available Commands:\n\n🔸 /summary - Generate chat summary\n🔸 /show - View last summary\n🔸 /status - Check account status\n🔸 /pay X - Purchase X stars\n🔸 /tier X - Switch tier (free/basic/plus/pro/max/elite)\n\n💎 Subscription Tiers:\n\n🆓 FREE - 0 stars - 24 hrs cooldown\n🥉 BASIC - 250 stars - 3 hrs cooldown\n🥈 PLUS - 500 stars - 1 hr cooldown\n🥇 PRO - 1000 stars - 15 min cooldown\n💎 MAX - 2000 stars - 15 min cooldown\n👑 ELITE - 2000 stars - 15 min cooldown")
 
 
 def change_tier(m: telebot.types.Message):
@@ -166,7 +166,7 @@ def change_tier(m: telebot.types.Message):
     tier_names = {"free": 0, "basic": 1, "plus": 2, "pro": 3, "max": 4, "elite": 4}
     
     if tier.lower() not in tier_names:
-        bot.reply_to(m, "Invalid tier. Choose from: free, basic, plus, pro, max, elite")
+        bot.reply_to(m, "❌ Invalid tier. Choose from: free, basic, plus, pro, max, elite")
         return
         
     tier = tier_names[tier.lower()]
@@ -176,11 +176,11 @@ def change_tier(m: telebot.types.Message):
     if not status:
         tier_names = ["FREE", "BASIC", "PLUS", "PRO", "MAX", "ELITE"]
         tier_name = tier_names[tier] if tier < len(tier_names) else f"TIER {tier}"
-        bot.reply_to(m, f"You're already on {tier_name} tier.")
+        bot.reply_to(m, f"ℹ️ You're already on {tier_name} tier.")
         return
 
     this_core.update()
-    bot.reply_to(m, "Tier updated successfully!")
+    bot.reply_to(m, "✅ Tier updated successfully!")
 
 
 def show_status(m: telebot.types.Message):
@@ -188,9 +188,10 @@ def show_status(m: telebot.types.Message):
     core = _get_core(gid)
     interval, balance, payed_date, active, tier = core.get_status()
 
-    tier_names = ["FREE", "BASIC", "PLUS", "PRO", "MAX", "ELITE"]
+    status_icon = "🟢" if active else "🔴"
+    tier_names = ["🆓 FREE", "🥉 BASIC", "🥈 PLUS", "🥇 PRO", "💎 MAX", "👑 ELITE"]
     tier_name = tier_names[tier] if tier < len(tier_names) else f"TIER {tier}"
-    out = f"Account Status\n\nStatus: {'Active' if active else 'Inactive'}\nBalance: {balance} stars\nTier: {tier_name}\nCooldown: {int(interval / 60)} minutes\nLast Payment: {datetime.datetime.fromtimestamp(payed_date).strftime('%d/%m/%y %H:%M')}"
+    out = f"📊 Account Status\n\n{status_icon} Status: {'Active' if active else 'Inactive'}\n⭐ Balance: {balance} stars\n💎 Tier: {tier_name}\n⏱️ Cooldown: {int(interval / 60)} minutes\n📅 Last Payment: {datetime.datetime.fromtimestamp(payed_date).strftime('%d/%m/%y %H:%M')}"
 
     bot.reply_to(m, out)
 
@@ -236,7 +237,7 @@ def poll_summaries():
         redis_conn.set('summaries', json.dumps(summs))
 
         print(f"[BOT] Sending summary to chat {gid}")
-        bot.send_message(gid, f"Summary Generated - {time.strftime('%H:%M', time.localtime())}\n\n{new_summary}")
+        bot.send_message(gid, f"📄 Summary Generated - {time.strftime('%H:%M', time.localtime())}\n\n{new_summary}")
 
         print(f"[BOT] Storing summary {new_summary[:10]} in group {gid}")
         core = Core(gid)

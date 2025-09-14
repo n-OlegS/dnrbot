@@ -18,7 +18,7 @@ class Core:
         self.balance = 0
         self.tier = 0
         self.payed_date = int(time.time())
-        self.summary = "No summary available. Use /summary to generate your first chat summary."
+        self.summary = "📄 No summary available. Use /summary to generate your first chat summary."
 
         self.redis_conn = redis.Redis(host=os.getenv('REDIS_HOST'))
         self.rq = rq.Queue(connection=self.redis_conn)
