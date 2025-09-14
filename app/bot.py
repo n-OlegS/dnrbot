@@ -56,6 +56,8 @@ def handle_message(m: telebot.types.Message):
             change_tier(m)
         elif m.text[1:] == "status":
             show_status(m)
+        elif m.text[1:] == "help":
+            show_help(m)
         elif m.text[1:5] in ['pay ', 'buy ']:
             initiate_payment(m)
         else:
@@ -149,6 +151,10 @@ def got_payment(msg):
     if stars_paid == 1 and DEBUG:
         stars_paid = 100
     bkcore.group_payed(gid, stars_paid)
+
+
+def show_help(m: telebot.types.Message):
+    bot.reply_to(m, "/summary to sgenerate sumamry \n/show to show last summary \n/status to see group payed status\n/pay X to pay X\n/tier X to switch to tier X\n/help to see this text \n\nTiers available - 0, 1, 2, 3, 4 \nnumber|price/month|timeout(min) \n0|0|1440 \n1|250|180 \n2|500|60 \n3|1000|15 \n4|2000|15")
 
 
 def change_tier(m: telebot.types.Message):
