@@ -153,7 +153,7 @@ def got_payment(msg):
 
 
 def show_help(m: telebot.types.Message):
-    bot.reply_to(m, "📋 **Available Commands:**\n\n🔸 `/summary` - Generate chat summary\n🔸 `/show` - View last summary\n🔸 `/status` - Check account status\n🔸 `/pay X` - Purchase X stars\n🔸 `/tier X` - Switch to tier (free/basic/plus/pro/max/elite)\n\n💎 **Subscription Tiers:**\n\n```\n Tier  │ Price/Month │ Cooldown\n───────┼─────────────┼─────────\n FREE  │      0      │  24 hrs\n BASIC │  250 stars  │  3 hrs\n PLUS  │  500 stars  │  1 hr\n PRO   │ 1000 stars  │ 15 min\n MAX   │ 2000 stars  │ 15 min\n ELITE │ 2000 stars  │ 15 min\n```")
+    bot.reply_to(m, "📋 **Available Commands:**\n\n🔸 /summary - Generate chat summary\n🔸 /show - View last summary\n🔸 /status - Check account status\n🔸 /pay X - Purchase X stars\n🔸 /tier X - Switch tier (free/basic/plus/pro/max/elite)\n\n💎 **Subscription Tiers:**\n\nFREE - 0 stars - 24 hrs cooldown\nBASIC - 250 stars - 3 hrs cooldown\nPLUS - 500 stars - 1 hr cooldown\nPRO - 1000 stars - 15 min cooldown\nMAX - 2000 stars - 15 min cooldown\nELITE - 2000 stars - 15 min cooldown")
 
 
 def change_tier(m: telebot.types.Message):
