@@ -6,6 +6,7 @@ import telebot
 import redis
 import json
 import threading
+import sqlite3
 
 from core.core import Core
 from core.cleaner import clean
@@ -52,6 +53,7 @@ def handle_message(m: telebot.types.Message):
     result = command_parser.parse(m.text)
     
     if result.is_command:
+        print(f"[BOT] Handling command-type message")
         if not result.is_valid:
             bot.reply_to(m, f"❌ {result.error}")
             return
