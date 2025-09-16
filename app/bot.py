@@ -97,7 +97,26 @@ def summary(m: telebot.types.Message):
         return
 
     print(f"[BOT] Summary request rejected for chat {gid}")
-    bot.reply_to(m, "⏱️ Summary request is on cooldown. Use /show to view your last summary or check /status for timing details.")
+    
+    # Calculate next available time
+    next_available = core.last + core.interval
+    time_remaining = next_available - int(time.time())
+    
+    if time_remaining > 0:
+        if time_remaining >= 3600:  # >= 1 hour
+            hours = time_remaining // 3600
+            minutes = (time_remaining % 3600) // 60
+            time_str = f"{hours}h {minutes}m" if minutes > 0 else f"{hours}h"
+        elif time_remaining >= 60:  # >= 1 minute
+            minutes = time_remaining // 60
+            time_str = f"{minutes}m"
+        else:
+            time_str = f"{time_remaining}s"
+        
+        next_time = datetime.datetime.fromtimestamp(next_available).strftime('%H:%M')
+        bot.reply_to(m, f"⏱️ Summary on cooldown. Next available in {time_str} (at {next_time}). Use /show to view your last summary.")
+    else:
+        bot.reply_to(m, "⏱️ Summary request is on cooldown. Use /show to view your last summary or check /status for timing details.")
 
 
 def initiate_payment(m: telebot.types.Message):
@@ -151,8 +170,47 @@ def got_payment(msg):
     bkcore.group_payed(gid, stars_paid)
 
 
+def _get_tier_prices():
+    """Get tier pricing from database"""
+    dotenv.load_dotenv()
+    path = os.getenv('SQL_PATH')
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+    
+    # Get pricing data: id, price, interval
+    prices = cursor.execute("SELECT id, price, interval FROM prices ORDER BY id").fetchall()
+    conn.close()
+    
+    tier_info = []
+    tier_names = ["🆓 FREE", "🥉 BASIC", "🥈 PLUS", "🥇 PRO", "💎 MAX", "👑 ELITE"]
+    
+    for tier_id, price, interval_minutes in prices:
+        if tier_id < len(tier_names):
+            name = tier_names[tier_id]
+            if interval_minutes >= 1440:  # >= 24 hours
+                cooldown = f"{interval_minutes // 1440} day{'s' if interval_minutes // 1440 > 1 else ''}"
+            elif interval_minutes >= 60:  # >= 1 hour
+                cooldown = f"{interval_minutes // 60} hr{'s' if interval_minutes // 60 > 1 else ''}"
+            else:
+                cooldown = f"{interval_minutes} min"
+            
+            tier_info.append(f"{name} - {price} stars - {cooldown} cooldown")
+    
+    return tier_info
+
+
 def show_help(m: telebot.types.Message):
-    bot.reply_to(m, "📋 Available Commands:\n\n🔸 /summary - Generate chat summary\n🔸 /show - View last summary\n🔸 /status - Check account status\n🔸 /pay X - Purchase X stars\n🔸 /tier X - Switch tier (free/basic/plus/pro/max/elite)\n\n💎 Subscription Tiers:\n\n🆓 FREE - 0 stars - 24 hrs cooldown\n🥉 BASIC - 250 stars - 3 hrs cooldown\n🥈 PLUS - 500 stars - 1 hr cooldown\n🥇 PRO - 1000 stars - 15 min cooldown\n💎 MAX - 2000 stars - 15 min cooldown\n👑 ELITE - 2000 stars - 15 min cooldown")
+    try:
+        tier_info = _get_tier_prices()
+        tiers_text = "\n".join(tier_info)
+    except Exception as e:
+        print(f"[BOT] Error fetching pricing: {e}")
+        # Fallback to static pricing
+        tiers_text = "🆓 FREE - 0 stars - 24 hrs cooldown\n🥉 BASIC - 250 stars - 3 hrs cooldown\n🥈 PLUS - 500 stars - 1 hr cooldown\n🥇 PRO - 1000 stars - 15 min cooldown\n💎 MAX - 2000 stars - 15 min cooldown\n👑 ELITE - 2000 stars - 15 min cooldown"
+    
+    help_text = f"📋 Available Commands:\n\n🔸 /summary - Generate chat summary\n🔸 /show - View last summary\n🔸 /status - Check account status\n🔸 /pay X - Purchase X stars\n🔸 /tier X - Switch tier (free/basic/plus/pro/max/elite)\n\n💎 Subscription Tiers:\n\n{tiers_text}"
+    
+    bot.reply_to(m, help_text)
 
 
 def change_tier(m: telebot.types.Message):
