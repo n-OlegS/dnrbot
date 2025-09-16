@@ -25,6 +25,7 @@ def job(prompt, gid):
     with open(os.getenv('PROMPT_PATH'), 'r') as f:
         instructions = f.read()
     print(f"[LLM] Loaded prompt instructions ({len(instructions)} chars)")
+    print(f"[LLM] Loaded context instructions ({len(prompt)} chars)")
 
     print(f"[LLM] Sending request to OpenAI API...")
     response = client.responses.create(
