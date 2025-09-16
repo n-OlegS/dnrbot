@@ -9,6 +9,7 @@ import threading
 
 from core.core import Core
 from core.cleaner import clean
+from core.command_parser import CommandParser
 from bookkeeping.core import BKCore
 from bookkeeping.deductor import deductor_d
 
@@ -24,7 +25,7 @@ if not TOKEN:
 bot = telebot.TeleBot(TOKEN, threaded=False)
 
 cores = {}
-
+command_parser = CommandParser(debug=DEBUG)
 bkcore = BKCore()
 
 
@@ -47,24 +48,33 @@ def start_message(m: telebot.types.Message):
 
 @bot.message_handler(content_types=["text"])
 def handle_message(m: telebot.types.Message):
-    if m.text[0] == '/':
-        if m.text[1:] in ['summ', 'summary', 'generate', 'tldr']:
+    # Parse command
+    result = command_parser.parse(m.text)
+    
+    if result.is_command:
+        if not result.is_valid:
+            bot.reply_to(m, f"❌ {result.error}")
+            return
+        
+        # Route to appropriate handler
+        if result.command == 'summary':
             summary(m)
-        elif m.text[1:] == 'show':
+        elif result.command == 'show':
             show(m)
-        elif m.text[1:6] == 'tier ':
-            change_tier(m)
-        elif m.text[1:] == "status":
+        elif result.command == 'status':
             show_status(m)
-        elif m.text[1:] == "help":
+        elif result.command == 'help':
             show_help(m)
-        elif m.text[1:5] in ['pay ', 'buy ']:
+        elif result.command == 'tier':
+            change_tier(m)
+        elif result.command == 'pay':
             initiate_payment(m)
         else:
             bot.reply_to(m, "❓ Unknown command. Use /help to see all available commands.")
-
+        
         return
 
+    # Handle regular message
     gid = m.chat.id
     core = _get_core(gid)
     print(f"[BOT] Message from user {m.from_user.id} in chat {gid}: {m.text[:50]}...")
@@ -90,28 +100,17 @@ def summary(m: telebot.types.Message):
     bot.reply_to(m, "⏱️ Summary request is on cooldown. Use /show to view your last summary or check /status for timing details.")
 
 
-def _check_amount(amount):
-    try:
-        amount = int(amount)
-    except ValueError:
-        return False
-
-    if DEBUG:
-        return True
-    else:
-        if amount < 50 or amount > 5000:
-            return False
-
-
 def initiate_payment(m: telebot.types.Message):
-    # ensure payment ok
-    amount = m.text[4:]
+    # Parse amount from command
+    result = command_parser.parse(m.text)
+    amount_str = result.params
 
-    if not _check_amount(amount):
-        bot.reply_to(m, '❌ Invalid amount! Please specify between 50-5000 stars.')
+    is_valid, error = command_parser._validate_amount(amount_str, debug=DEBUG)
+    if not is_valid:
+        bot.reply_to(m, f'❌ {error}')
         return
 
-    amount = int(amount)
+    amount = int(amount_str)
 
     payload = f"topup:{m.chat.id}"
 
