@@ -296,7 +296,7 @@ def poll_summaries():
         redis_conn.set('summaries', json.dumps(summs))
 
         print(f"[BOT] Sending summary to chat {gid}")
-        bot.send_message(gid, f"📄 Summary Generated - {time.strftime('%H:%M', time.localtime())}\n\n{new_summary}")
+        bot.send_message(gid, f"{new_summary}")
 
         print(f"[BOT] Storing summary {new_summary[:10]} in group {gid}")
         core = Core(gid)
