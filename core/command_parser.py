@@ -4,7 +4,8 @@ Command parser for Telegram bot commands with improved structure and validation.
 
 
 class CommandParser:
-    def __init__(self, debug=False):
+    def __init__(self, bot_username=None, debug=False):
+        self.bot_username = bot_username
         self.debug = debug
         # Command registry mapping command aliases to (requires_params, validation_func)
         self.commands = {
@@ -50,6 +51,7 @@ class CommandParser:
     def parse(self, text):
         """
         Parse command text and return ParseResult.
+        Only processes commands that end with the bot username.
         
         Returns:
             ParseResult with command, params, and validation status
@@ -64,8 +66,15 @@ class CommandParser:
         
         # Split into command and parameters
         parts = command_text.split(' ', 1)
-        command = parts[0].lower()
+        full_command = parts[0].lower()
         params = parts[1].strip() if len(parts) > 1 else ''
+        
+        # Check if command ends with bot username - if not, treat as regular message
+        if not full_command.endswith(self.bot_username.lower()):
+            return ParseResult(is_command=False)
+        
+        # Remove bot username from command to get actual command
+        command = full_command[:-len(self.bot_username)]
         
         # Check if command exists
         if command not in self.commands:

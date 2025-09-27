@@ -16,6 +16,7 @@ from bookkeeping.deductor import deductor_d
 
 dotenv.load_dotenv(dotenv_path='../.env')
 TOKEN = os.getenv('BOT_TOKEN')
+BOT_USERNAME = os.getenv('BOTUSERNAME')
 DEBUG = os.getenv('DEBUG') == 'True'
 
 SLEEP_TIME = 1
@@ -23,10 +24,13 @@ SLEEP_TIME = 1
 if not TOKEN:
     quit("Token parsing failed")
 
+if not BOT_USERNAME:
+    quit("Bot username parsing failed")
+
 bot = telebot.TeleBot(TOKEN, threaded=False)
 
 cores = {}
-command_parser = CommandParser(debug=DEBUG)
+command_parser = CommandParser(bot_username=BOT_USERNAME, debug=DEBUG)
 bkcore = BKCore()
 
 
