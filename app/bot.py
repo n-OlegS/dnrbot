@@ -17,6 +17,7 @@ from bookkeeping.deductor import deductor_d
 dotenv.load_dotenv(dotenv_path='../.env')
 TOKEN = os.getenv('BOT_TOKEN')
 BOT_USERNAME = os.getenv('BOTUSERNAME')
+NOTIFIEE_ID = os.getenv('NOTIFIEE_ID')
 DEBUG = os.getenv('DEBUG') == 'True'
 
 SLEEP_TIME = 1
@@ -26,12 +27,28 @@ if not TOKEN:
 
 if not BOT_USERNAME:
     quit("Bot username parsing failed")
+if NOTIFIEE_ID is None:
+    quit("NOTIFIEE_ID not found in .env file")
+
+try:
+    NOTIFIEE_ID = int(NOTIFIEE_ID)
+except ValueError:
+    quit("NOTIFIEE_ID must be a valid integer")
 
 bot = telebot.TeleBot(TOKEN, threaded=False)
 
 cores = {}
 command_parser = CommandParser(bot_username=BOT_USERNAME, debug=DEBUG)
 bkcore = BKCore()
+
+
+def _send_notification(message):
+    """Send notification to the configured notifiee if enabled"""
+    if NOTIFIEE_ID != 0:
+        try:
+            bot.send_message(NOTIFIEE_ID, f"🔔 {message}")
+        except Exception as e:
+            print(f"[BOT] Failed to send notification: {e}")
 
 
 def _get_core(gid) -> Core:
@@ -275,45 +292,86 @@ def cleaner():
         time.sleep(3600)
 
 
-def poll_summaries():
+def poll_redis_queues():
     redis_conn = redis.Redis(host=os.getenv('REDIS_HOST'))
 
     while 1:
-        pending = redis_conn.get('pending')
-        if pending is None:
+        # Check for pending summaries
+        pending_summaries = redis_conn.get('pending')
+        if pending_summaries is None:
             redis_conn.set('pending', 0)
-            pending = 0
+            pending_summaries = 0
+        else:
+            pending_summaries = int(pending_summaries)
 
-        if int(pending) == 0:
+        # Check for pending notifications
+        pending_notifications = redis_conn.get('pending_notifications')
+        if pending_notifications is None:
+            redis_conn.set('pending_notifications', 0)
+            pending_notifications = 0
+        else:
+            pending_notifications = int(pending_notifications)
+
+        # If nothing pending, sleep
+        if pending_summaries == 0 and pending_notifications == 0:
             time.sleep(SLEEP_TIME)
             continue
 
-        redis_conn.incrby('pending', -1)
-        summs_bytes = redis_conn.get('summaries')
-        
-        if summs_bytes is None:
-            raise ValueError
+        # Process summaries
+        if pending_summaries > 0:
+            redis_conn.incrby('pending', -1)
+            summs_bytes = redis_conn.get('summaries')
+            
+            if summs_bytes is not None:
+                summs = json.loads(summs_bytes.decode('utf-8'))
+                if summs:
+                    new_summary, gid = summs.pop(0)
+                    redis_conn.set('summaries', json.dumps(summs))
 
-        summs = json.loads(summs_bytes.decode('utf-8'))
-        new_summary, gid = summs.pop(0)
+                    print(f"[BOT] Sending summary to chat {gid}")
+                    bot.send_message(gid, f"{new_summary}")
 
-        redis_conn.set('summaries', json.dumps(summs))
+                    # Send notification about summary delivery with chat info
+                    try:
+                        chat_info = bot.get_chat(gid)
+                        chat_title = chat_info.title or chat_info.first_name or f"Chat {gid}"
+                        _send_notification(f"Summary delivered to '{chat_title}' (ID: {gid})")
+                    except Exception as e:
+                        print(f"[BOT] Failed to get chat info: {e}")
+                        _send_notification(f"Summary delivered to chat (ID: {gid})")
 
-        print(f"[BOT] Sending summary to chat {gid}")
-        bot.send_message(gid, f"{new_summary}")
+                    print(f"[BOT] Storing summary {new_summary[:10]} in group {gid}")
+                    core = Core(gid)
+                    core.update_summary(new_summary)
+                    core.close()
 
-        print(f"[BOT] Storing summary {new_summary[:10]} in group {gid}")
-        core = Core(gid)
-        core.update_summary(new_summary)
-        core.close()
+        # Process notifications
+        if pending_notifications > 0:
+            redis_conn.incrby('pending_notifications', -1)
+            notifications_bytes = redis_conn.get('notifications')
+            
+            if notifications_bytes is not None:
+                notifications = json.loads(notifications_bytes.decode('utf-8'))
+                if notifications:
+                    notification_message, recipient_id = notifications.pop(0)
+                    redis_conn.set('notifications', json.dumps(notifications))
+
+                    print(f"[BOT] Sending notification to user {recipient_id}")
+                    try:
+                        bot.send_message(recipient_id, f"🔔 {notification_message}")
+                    except Exception as e:
+                        print(f"[BOT] Failed to send notification: {e}")
 
 
 if __name__ == '__main__':
     print("[BOT] Starting Telegram bot...")
     
-    # Start poll_summaries in a background thread
-    print("[BOT] Starting summary polling thread...")
-    polling_thread = threading.Thread(target=poll_summaries, daemon=True)
+    # Send startup notification
+    _send_notification("Bot started successfully")
+    
+    # Start Redis queue polling in a background thread
+    print("[BOT] Starting Redis queue polling thread...")
+    polling_thread = threading.Thread(target=poll_redis_queues, daemon=True)
     polling_thread.start()
 
     print("[BOT] Starting database cleanup thread...")
