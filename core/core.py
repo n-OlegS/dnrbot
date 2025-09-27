@@ -4,8 +4,17 @@ import dotenv
 import sqlite3
 import os
 import time
+import json
 
 from core.llm_gateway import job
+
+# Load notification settings
+dotenv.load_dotenv()
+NOTIFIEE_ID = os.getenv('NOTIFIEE_ID')
+if NOTIFIEE_ID:
+    NOTIFIEE_ID = int(NOTIFIEE_ID)
+else:
+    NOTIFIEE_ID = 0
 
 
 class Core:
@@ -56,7 +65,30 @@ class Core:
             self.cursor.execute('UPDATE chats SET interval = ?, last = ?, summ = ?, balance = ?, payed_date = ?, active = ?, tier = ? WHERE id = ?', (self.interval, self.last, self.summary, self.balance, self.payed_date, self.active, self.tier, self.id))
         else:
             self.cursor.execute('INSERT INTO chats (id, interval, last, summ, balance, payed_date, active, tier) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', (self.id, self.interval, self.last, self.summary, self.balance, self.payed_date, self.active, self.tier))
+            # Send notification for new chat
+            self._notify_new_chat()
         self.conn.commit()
+    
+    def _notify_new_chat(self):
+        """Send notification about new chat to notifiee"""
+        if NOTIFIEE_ID != 0:
+            try:
+                # Simple notification for new chat - chat title will be retrieved in bot.py if needed
+                notification = f"Bot added to new chat (ID: {self.id})"
+                
+                existing_notifications = self.redis_conn.get('notifications')
+                if existing_notifications is None:
+                    notifications_list = []
+                else:
+                    notifications_list = json.loads(existing_notifications.decode('utf-8'))
+                
+                notifications_list.append([notification, NOTIFIEE_ID])
+                self.redis_conn.set('notifications', json.dumps(notifications_list))
+                self.redis_conn.incrby('pending_notifications', 1)
+                
+                print(f"[CORE] New chat notification queued for chat {self.id}")
+            except Exception as e:
+                print(f"[CORE] Failed to queue new chat notification: {e}")
 
     def _do_checks(self, uid, req_interval) -> tuple[bool, str]:
         # check if group ok
