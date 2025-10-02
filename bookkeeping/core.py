@@ -47,8 +47,9 @@ class BKCore:
         for gid, tier in gids:
             interval_result = self.cursor.execute("SELECT interval FROM prices WHERE id = ?", (tier,)).fetchone()
             if interval_result:
-                interval = interval_result[0]  # Extract the actual value from tuple
-                self.cursor.execute("UPDATE chats SET interval = ? WHERE id = ?", (interval, gid))
+                interval_minutes = interval_result[0]  # Extract the actual value from tuple
+                interval_seconds = interval_minutes * 60  # Convert minutes to seconds
+                self.cursor.execute("UPDATE chats SET interval = ? WHERE id = ?", (interval_seconds, gid))
 
         self.connection.commit()
 

@@ -64,7 +64,9 @@ def process_group(gid, in_cursor=None, check_date=True):
         out = True
         interval = cursor.execute('SELECT interval FROM prices WHERE id = ?', (tier,)).fetchone()[0]
     else:
-        interval = 86400
+        # Get default interval from database for fallback
+        default_interval_result = cursor.execute('SELECT interval FROM prices WHERE id = 0').fetchone()
+        interval = default_interval_result[0] if default_interval_result else 1440
         balance += due
         out = False
 

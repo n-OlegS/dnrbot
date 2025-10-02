@@ -21,7 +21,6 @@ class Core:
     def __init__(self, gid):
         print(f"[CORE] Initializing Core for chat {gid}")
         self.id = gid
-        self.interval = 24 * 60 * 60
         self.last = 0
         self.active = 0
         self.balance = 0
@@ -37,6 +36,13 @@ class Core:
 
         self.conn = sqlite3.connect(path)
         self.cursor = self.conn.cursor()
+        
+        # Load default interval from database after cursor is initialized
+        default_interval_result = self.cursor.execute("SELECT interval FROM prices WHERE id = 0").fetchone()
+        if default_interval_result:
+            self.interval = default_interval_result[0] * 60  # Convert minutes to seconds
+        else:
+            self.interval = 86400  # Fallback to 24 hours
 
         self.update()
         print(f"[CORE] Core initialized for chat {gid}")
@@ -93,7 +99,11 @@ class Core:
     def _do_checks(self, uid, req_interval) -> tuple[bool, str]:
         # check if group ok
         if req_interval is None:
-            if (bool(self.active) and time.time() >= self.last + self.interval) or time.time() > self.last + 24 * 60 * 60:
+            # Get default interval for fallback check
+            default_interval_result = self.cursor.execute("SELECT interval FROM prices WHERE id = 0").fetchone()
+            default_interval_seconds = default_interval_result[0] * 60 if default_interval_result else 86400
+            
+            if (bool(self.active) and time.time() >= self.last + self.interval) or time.time() > self.last + default_interval_seconds:
                 return True, "group"
 
         # check user ok
@@ -185,8 +195,12 @@ class Core:
             new_conn.close()
             return
 
+        # Get default interval from database
+        default_interval_result = new_cursor.execute("SELECT interval FROM prices WHERE id = 0").fetchone()
+        default_interval_minutes = default_interval_result[0] if default_interval_result else 1440
+        
         print(f"[CORE] Creating new user {uid} with default settings")
-        new_cursor.execute('INSERT INTO users (id, paying, last, interval) VALUES (?, ?, ?, ?)', (uid, 0, 0, 60 * 1440))
+        new_cursor.execute('INSERT INTO users (id, paying, last, interval) VALUES (?, ?, ?, ?)', (uid, 0, 0, default_interval_minutes * 60))
         new_conn.commit()
         new_conn.close()
 
