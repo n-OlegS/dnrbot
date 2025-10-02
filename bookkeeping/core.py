@@ -41,4 +41,15 @@ class BKCore:
         self.cursor.execute('UPDATE chats SET balance = ? WHERE id = ?', (old_amount + amount, gid))
         self.connection.commit()
 
+    def update_group_intervals(self):
+        gids = self.cursor.execute("SELECT id, tier FROM chats").fetchall()
+
+        for gid, tier in gids:
+            interval_result = self.cursor.execute("SELECT interval FROM prices WHERE id = ?", (tier,)).fetchone()
+            if interval_result:
+                interval = interval_result[0]  # Extract the actual value from tuple
+                self.cursor.execute("UPDATE chats SET interval = ? WHERE id = ?", (interval, gid))
+
+        self.connection.commit()
+
 

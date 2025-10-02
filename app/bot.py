@@ -42,6 +42,14 @@ command_parser = CommandParser(bot_username=BOT_USERNAME, debug=DEBUG)
 bkcore = BKCore()
 
 
+def _do_startup():
+    # Send startup notification
+    _send_notification("Bot started successfully")
+
+    bkcore.update_group_intervals()
+    print("Ensured up to date intervals")
+
+
 def _send_notification(message):
     """Send notification to the configured notifiee if enabled"""
     if NOTIFIEE_ID != 0:
@@ -365,9 +373,7 @@ def poll_redis_queues():
 
 if __name__ == '__main__':
     print("[BOT] Starting Telegram bot...")
-    
-    # Send startup notification
-    _send_notification("Bot started successfully")
+    _do_startup()
     
     # Start Redis queue polling in a background thread
     print("[BOT] Starting Redis queue polling thread...")
