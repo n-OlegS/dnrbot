@@ -137,7 +137,7 @@ class CommandParser:
         if debug:
             return True, None
         
-        if amount < 50 or amount > 5000:
+        if amount > 5000:
             return False, "Invalid amount! Please specify between 50-5000 stars"
             
         return True, None
