@@ -18,6 +18,8 @@ def job(prompt, gid):
     dotenv.load_dotenv()
     proxy_url = os.getenv('PROXY_URL')
     http_client = httpx.Client(proxy=proxy_url)
+
+    model = os.getenv('OPENAI_MODEL')
     
     client = OpenAI(api_key=os.getenv('OPENAI_KEY'), http_client=http_client)
     print(f"[LLM] OpenAI client initialized")
@@ -29,7 +31,7 @@ def job(prompt, gid):
 
     print(f"[LLM] Sending request to OpenAI API...")
     response = client.responses.create(
-        model="gpt-5-nano",
+        model=model,
         instructions=instructions,
         input=prompt
     )
