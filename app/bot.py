@@ -23,6 +23,7 @@ DEBUG = os.getenv('DEBUG') == 'True'
 SLEEP_TIME = 1
 
 if not TOKEN:
+    # no valid token
     quit("Token parsing failed")
 
 if not BOT_USERNAME:
